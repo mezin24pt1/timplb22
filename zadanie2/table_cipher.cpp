@@ -25,9 +25,11 @@ std::wstring cleanRussianText(const std::wstring& s) {
         if (isRussianLetter(c)) {
             result += toUpperRussian(c);
         }
+      
     }
     return result;
 }
+
 
 TableCipher::TableCipher(int key) {
     if (key <= 0) {
@@ -36,6 +38,7 @@ TableCipher::TableCipher(int key) {
     columns = key;
 }
 
+
 std::wstring TableCipher::encrypt(const std::wstring& plain_text) {
     if (plain_text.empty()) {
         throw cipher_error("Текст не может быть пустым");
@@ -43,23 +46,26 @@ std::wstring TableCipher::encrypt(const std::wstring& plain_text) {
 
     std::wstring cleanText = cleanRussianText(plain_text);
     if (cleanText.empty()) {
-        throw cipher_error("Недопустимые символы");
+        throw cipher_error("Нет допустимых символов (только русские буквы)");
     }
 
     int text_length = static_cast<int>(cleanText.length());
     int rows = (text_length + columns - 1) / columns;
-    std::vector<std::vector<wchar_t>> table(rows, std::vector<wchar_t>(columns, L' '));
-    int index = 0;
 
+
+    std::vector<std::vector<wchar_t>> table(rows, std::vector<wchar_t>(columns, L'Я'));
+
+
+    int index = 0;
     for (int row = 0; row < rows; ++row) {
         for (int col = 0; col < columns; ++col) {
             if (index < text_length) {
                 table[row][col] = cleanText[index++];
-            } else {
-                table[row][col] = L'Я'; 
             }
+         
         }
     }
+
 
     std::wstring result;
     for (int col = columns - 1; col >= 0; --col) {
@@ -67,8 +73,10 @@ std::wstring TableCipher::encrypt(const std::wstring& plain_text) {
             result += table[row][col];
         }
     }
+
     return result;
 }
+
 
 std::wstring TableCipher::decrypt(const std::wstring& cipher_text) {
     if (cipher_text.empty()) {
@@ -81,18 +89,21 @@ std::wstring TableCipher::decrypt(const std::wstring& cipher_text) {
     }
 
     int rows = total_chars / columns;
-    std::vector<std::vector<wchar_t>> table(rows, std::vector<wchar_t>(columns, L' '));
-    int index = 0;
+    std::vector<std::vector<wchar_t>> table(rows, std::vector<wchar_t>(columns));
 
+
+    int index = 0;
     for (int col = columns - 1; col >= 0; --col) {
         for (int row = 0; row < rows; ++row) {
             wchar_t c = cipher_text[index++];
+        
             if (!((c >= L'А' && c <= L'Я') || c == L'Ё')) {
                 throw cipher_error(std::string("Недопустимый символ в шифротексте: ") + static_cast<char>(c));
             }
             table[row][col] = c;
         }
     }
+
 
     std::wstring result;
     for (int row = 0; row < rows; ++row) {
@@ -101,8 +112,10 @@ std::wstring TableCipher::decrypt(const std::wstring& cipher_text) {
         }
     }
 
+
     while (!result.empty() && result.back() == L'Я') {
         result.pop_back();
     }
+
     return result;
 }
