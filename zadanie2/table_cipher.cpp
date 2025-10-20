@@ -1,121 +1,80 @@
 #include "table_cipher.h"
 #include <vector>
+#include <algorithm>
 #include <stdexcept>
-#include <string>
+using namespace std;
 
-
-bool isRussianLetter(wchar_t c) {
-    return (c >= L'А' && c <= L'Я') || c == L'Ё' ||
-           (c >= L'а' && c <= L'я') || c == L'ё';
-}
-
-
-wchar_t toUpperRussian(wchar_t c) {
-    if (c >= L'а' && c <= L'я') {
-        return c - (L'а' - L'А');
-    }
-    if (c == L'ё') return L'Ё';
-    return c;
-}
-
-
-std::wstring cleanRussianText(const std::wstring& s) {
-    std::wstring result;
-    for (wchar_t c : s) {
-        if (isRussianLetter(c)) {
-            result += toUpperRussian(c);
-        }
-      
-    }
-    return result;
-}
-
-
-TableCipher::TableCipher(int key) {
+TableCipher::TableCipher(int key)
+{
     if (key <= 0) {
-        throw cipher_error("Ключ должен быть положительным числом");
+        throw invalid_argument("Ключ должен быть положительным числом");
     }
     columns = key;
 }
 
-
-std::wstring TableCipher::encrypt(const std::wstring& plain_text) {
+wstring TableCipher::encrypt(const wstring& plain_text)
+{
     if (plain_text.empty()) {
-        throw cipher_error("Текст не может быть пустым");
+        throw invalid_argument("Текст для шифрования не может быть пустым");
     }
-
-    std::wstring cleanText = cleanRussianText(plain_text);
-    if (cleanText.empty()) {
-        throw cipher_error("Нет допустимых символов (только русские буквы)");
-    }
-
-    int text_length = static_cast<int>(cleanText.length());
-    int rows = (text_length + columns - 1) / columns;
-
-
-    std::vector<std::vector<wchar_t>> table(rows, std::vector<wchar_t>(columns, L'Я'));
-
-
+    int text_length = plain_text.length();
+    int rows = (text_length + columns - 1) / columns; 
+    
+    vector<vector<wchar_t>> table(rows, vector<wchar_t>(columns, L' '));
     int index = 0;
-    for (int row = 0; row < rows; ++row) {
-        for (int col = 0; col < columns; ++col) {
+    
+    for (int row = 0; row < rows; row++) {
+        for (int col = 0; col < columns; col++) {
             if (index < text_length) {
-                table[row][col] = cleanText[index++];
+                table[row][col] = plain_text[index++];
+            } else {
+                table[row][col] = L'Я';
             }
-         
         }
     }
-
-
-    std::wstring result;
-    for (int col = columns - 1; col >= 0; --col) {
-        for (int row = 0; row < rows; ++row) {
+    
+    wstring result;
+    for (int col = columns - 1; col >= 0; col--) {
+        for (int row = 0; row < rows; row++) {
             result += table[row][col];
         }
     }
-
+    
     return result;
 }
 
-
-std::wstring TableCipher::decrypt(const std::wstring& cipher_text) {
+wstring TableCipher::decrypt(const wstring& cipher_text)
+{
     if (cipher_text.empty()) {
-        throw cipher_error("Текст не может быть пустым");
+        throw invalid_argument("Текст для расшифрования не может быть пустым");
     }
-
-    int total_chars = static_cast<int>(cipher_text.length());
+    
+    int total_chars = cipher_text.length();
+    
     if (total_chars % columns != 0) {
-        throw cipher_error("Длина зашифрованного текста не кратна числу столбцов");
+        throw invalid_argument("Длина зашифрованного текста должна быть кратна количеству столбцов");
     }
-
+    
     int rows = total_chars / columns;
-    std::vector<std::vector<wchar_t>> table(rows, std::vector<wchar_t>(columns));
-
-
+    vector<vector<wchar_t>> table(rows, vector<wchar_t>(columns, L' '));
     int index = 0;
-    for (int col = columns - 1; col >= 0; --col) {
-        for (int row = 0; row < rows; ++row) {
-            wchar_t c = cipher_text[index++];
-        
-            if (!((c >= L'А' && c <= L'Я') || c == L'Ё')) {
-                throw cipher_error(std::string("Недопустимый символ в шифротексте: ") + static_cast<char>(c));
-            }
-            table[row][col] = c;
+    
+    for (int col = columns - 1; col >= 0; col--) {
+        for (int row = 0; row < rows; row++) {
+            table[row][col] = cipher_text[index++];
         }
     }
-
-
-    std::wstring result;
-    for (int row = 0; row < rows; ++row) {
-        for (int col = 0; col < columns; ++col) {
+    
+    wstring result;
+    for (int row = 0; row < rows; row++) {
+        for (int col = 0; col < columns; col++) {
             result += table[row][col];
         }
     }
-
-
+    
     while (!result.empty() && result.back() == L'Я') {
         result.pop_back();
     }
-
+    
     return result;
 }
