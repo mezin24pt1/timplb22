@@ -1,19 +1,19 @@
-#pragma once
+#ifndef TABLE_CIPHER_H
+#define TABLE_CIPHER_H
+
 #include <string>
 #include <stdexcept>
-
-class cipher_error : public std::invalid_argument {
-public:
-    explicit cipher_error(const std::string& what_arg) : std::invalid_argument(what_arg) {}
-    explicit cipher_error(const char* what_arg) : std::invalid_argument(what_arg) {}
-};
+using namespace std;
 
 class TableCipher
 {
 private:
     int columns;
+    
 public:
     TableCipher(int key);
-    std::wstring encrypt(const std::wstring& plain_text);
-    std::wstring decrypt(const std::wstring& cipher_text);
+    wstring encrypt(const wstring& plain_text);
+    wstring decrypt(const wstring& cipher_text);
 };
+
+#endif
