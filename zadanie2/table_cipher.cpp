@@ -1,80 +1,129 @@
+
 #include "table_cipher.h"
-#include <vector>
 #include <algorithm>
-#include <stdexcept>
+#include <vector>
+#include <cwctype>  
 using namespace std;
 
-TableCipher::TableCipher(int key)
+int Table::getValidKey(const int key)
 {
-    if (key <= 0) {
-        throw invalid_argument("Ключ должен быть положительным числом");
-    }
-    columns = key;
+    if (key <= 0)
+        throw cipher_error("Invalid key: key must be positive");
+    return key;
 }
-
-wstring TableCipher::encrypt(const wstring& plain_text)
+wstring Table::getValidOpenText(const wstring& s)
 {
-    if (plain_text.empty()) {
-        throw invalid_argument("Текст для шифрования не может быть пустым");
-    }
-    int text_length = plain_text.length();
-    int rows = (text_length + columns - 1) / columns; 
+    wstring tmp;
+    wstring lower = L"абвгдеёжзийклмнопрстуфхцчшщъыьэюя";
+    wstring upper = L"АБВГДЕЁЖЗИЙКЛМНОПРСТУФХЦЧШЩЪЫЬЭЮЯ";
     
-    vector<vector<wchar_t>> table(rows, vector<wchar_t>(columns, L' '));
-    int index = 0;
-    
-    for (int row = 0; row < rows; row++) {
-        for (int col = 0; col < columns; col++) {
-            if (index < text_length) {
-                table[row][col] = plain_text[index++];
+    for (auto c : s) {
+        if (!iswspace(c)) { 
+            if (upper.find(c) != wstring::npos) {
+                tmp.push_back(c);
             } else {
-                table[row][col] = L'Я';
+    
+                size_t pos = lower.find(c);
+                if (pos != wstring::npos) {
+                    tmp.push_back(upper[pos]); 
+                }
             }
         }
     }
-    
-    wstring result;
-    for (int col = columns - 1; col >= 0; col--) {
-        for (int row = 0; row < rows; row++) {
-            result += table[row][col];
-        }
-    }
-    
-    return result;
+    if (tmp.empty())
+        throw cipher_error("Empty open text");
+    return tmp;
 }
 
-wstring TableCipher::decrypt(const wstring& cipher_text)
+wstring Table::getValidCipherText(const wstring& s)
 {
-    if (cipher_text.empty()) {
-        throw invalid_argument("Текст для расшифрования не может быть пустым");
-    }
-    
-    int total_chars = cipher_text.length();
-    
-    if (total_chars % columns != 0) {
-        throw invalid_argument("Длина зашифрованного текста должна быть кратна количеству столбцов");
-    }
-    
-    int rows = total_chars / columns;
-    vector<vector<wchar_t>> table(rows, vector<wchar_t>(columns, L' '));
-    int index = 0;
-    
-    for (int col = columns - 1; col >= 0; col--) {
-        for (int row = 0; row < rows; row++) {
-            table[row][col] = cipher_text[index++];
+    wstring tmp;
+    for (auto c : s) {
+        if (!iswspace(c)) {
+            tmp.push_back(c);
         }
     }
     
-    wstring result;
-    for (int row = 0; row < rows; row++) {
-        for (int col = 0; col < columns; col++) {
-            result += table[row][col];
+    if (tmp.empty())
+        throw cipher_error("Empty cipher text");
+    
+    wstring upper = L"АБВГДЕЁЖЗИЙКЛМНОПРСТУФХЦЧШЩЪЫЬЭЮЯ";  
+    for (auto c : tmp) {
+        if (upper.find(c) == wstring::npos)
+            throw cipher_error("Invalid cipher text");
+    }
+    return tmp;
+}
+
+Table::Table(int key)
+{
+    cols = getValidKey(key);
+}
+
+wstring Table::encrypt(const wstring& plain)
+{
+    wstring validText = getValidOpenText(plain);
+    int n = static_cast<int>(validText.length());
+    int rows = (n + cols - 1) / cols;
+
+    vector<vector<wchar_t>> grid(rows, vector<wchar_t>(cols, L' '));
+    int pos = 0;
+
+    for (int r = 0; r < rows; ++r) {
+        for (int c = 0; c < cols; ++c) {
+            if (pos < n) {
+                grid[r][c] = validText[pos++];
+            }
         }
     }
+
+    wstring out;
+    out.reserve(n);
     
-    while (!result.empty() && result.back() == L'Я') {
-        result.pop_back();
+    for (int c = cols - 1; c >= 0; --c) {
+        for (int r = 0; r < rows; ++r) {
+            if (grid[r][c] != L' ') {
+                out += grid[r][c];
+            }
+        }
     }
+    return out;
+}
+
+wstring Table::decrypt(const wstring& cipher)
+{
+    wstring validText = getValidCipherText(cipher);
+    int n = static_cast<int>(validText.length());
+    int rows = (n + cols - 1) / cols;
     
-    return result;
+    int fullCols = n % cols;
+    if (fullCols == 0) fullCols = cols;
+
+    vector<vector<wchar_t>> grid(rows, vector<wchar_t>(cols, L' '));
+    int pos = 0;
+
+    for (int c = cols - 1; c >= 0; --c) {
+        int h = rows;
+    
+        if (c >= fullCols) {
+            h = rows - 1;
+        }
+        for (int r = 0; r < h; ++r) {
+            if (pos < n) {
+                grid[r][c] = validText[pos++];
+            }
+        }
+    }
+
+    wstring out;
+    out.reserve(n);
+    
+    for (int r = 0; r < rows; ++r) {
+        for (int c = 0; c < cols; ++c) {
+            if (grid[r][c] != L' ') {
+                out += grid[r][c];
+            }
+        }
+    }
+    return out;
 }
