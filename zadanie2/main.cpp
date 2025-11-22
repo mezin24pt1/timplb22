@@ -1,4 +1,3 @@
-
 #include <iostream>
 #include <locale>
 #include <codecvt>
@@ -6,71 +5,75 @@
 #include <cwctype>
 #include <limits>
 #include <string>
-#include "table_cipher.h"
+#include "routeCipher.h"
 using namespace std;
 
-wstring str8_to_w(const string& s)
+wstring convertStringToWide(const string& inputString)
 {
-    wstring_convert<codecvt_utf8<wchar_t>> conv;
-    return conv.from_bytes(s);
+    wstring_convert<codecvt_utf8<wchar_t>> converter;
+    return converter.from_bytes(inputString);
 }
 
-string w_to_str8(const wstring& ws)
+string convertWideToString(const wstring& wideString)
 {
-    wstring_convert<codecvt_utf8<wchar_t>> conv;
-    return conv.to_bytes(ws);
+    wstring_convert<codecvt_utf8<wchar_t>> converter;
+    return converter.to_bytes(wideString);
 }
 
 int main()
 {
     setlocale(LC_ALL, "ru_RU.UTF-8");
-    string keyLine;
-    string msgLine;
-    unsigned action;
+    string columnInput;
+    string messageInput;
+    unsigned operationChoice;
 
-    cout << "Введите число столбцов: ";
-    getline(cin, keyLine);
+    cout << "Введите количество столбцов таблицы: ";
+    getline(cin, columnInput);
 
     try {
-        int cols = stoi(keyLine);
-        Table cipher(cols);
-        cout << "Таблица создана." << endl;
+        int columnCount = stoi(columnInput);
+        RouteTable cipher(columnCount);
+        cout << "Таблица для шифрования создана." << endl;
 
         do {
-            cout << "Выберите режим (0 — выход, 1 — шифрование, 2 — расшифровка): ";
-            if (!(cin >> action)) {
+            cout << "Выберите режим:\n";
+            cout << "0 — выход\n";
+            cout << "1 — шифрование\n";
+            cout << "2 — расшифрование\n";
+            if (!(cin >> operationChoice)) {
                 cin.clear();
                 cin.ignore(numeric_limits<streamsize>::max(), '\n');
                 continue;
             }
             cin.ignore(numeric_limits<streamsize>::max(), '\n');
 
-            if (action > 2) {
-                cout << "Неверный выбор режима." << endl;
-            } else if (action > 0) {
-                cout << "Введите строку: ";
-                getline(cin, msgLine);
+            if (operationChoice > 2) {
+                cout << "Неверный выбор операции." << endl;
+            } else if (operationChoice > 0) {
+                cout << "Введите текст: ";
+                getline(cin, messageInput);
 
                 try {
-                    if (action == 1) {
-                        wstring enc = cipher.encrypt(str8_to_w(msgLine));
-                        cout << "Зашифровано: " << w_to_str8(enc) << endl;
+                    if (operationChoice == 1) {
+                        wstring encodedText = cipher.encodeText(convertStringToWide(messageInput));
+                        cout << "Результат шифрования: " << convertWideToString(encodedText) << endl;
                     } else {
-                        wstring dec = cipher.decrypt(str8_to_w(msgLine));
-                        cout << "Расшифровано: " << w_to_str8(dec) << endl;
+                        wstring decodedText = cipher.decodeText(convertStringToWide(messageInput));
+                        cout << "Результат расшифровки: " << convertWideToString(decodedText) << endl;
                     }
-                } catch (const cipher_error& e) {
-                    cerr << "Ошибка при обработке текста: " << e.what() << endl;
+                } catch (const CipherException& error) {
+                    cerr << "Ошибка обработки текста: " << error.what() << endl;
                 }
             }
-        } while (action != 0);
+        } while (operationChoice != 0);
         
-    } catch (const cipher_error& e) {
-        cerr << "Ошибка инициализации шифра: " << e.what() << endl;
+    } catch (const CipherException& error) {
+        cerr << "Ошибка инициализации шифратора: " << error.what() << endl;
         return 1;
-    } catch (const exception& e) {
-        cerr << "Ошибка: " << e.what() << endl;
+    } catch (const exception& error) {
+        cerr << "Ошибка: " << error.what() << endl;
         return 1;
     }
+    
     return 0;
 }
