@@ -1,29 +1,24 @@
-#pragma once
 #include <string>
 #include <vector>
 #include <stdexcept>
 using namespace std;
 
-class cipher_error: public invalid_argument {
+class CipherException : public invalid_argument {
 public:
-    explicit cipher_error (const string& what_arg):
-        invalid_argument(what_arg) {}
-    explicit cipher_error (const char* what_arg):
-        invalid_argument(what_arg) {}
+    explicit CipherException(const string& message) : invalid_argument(message) {}
+    explicit CipherException(const char* message) : invalid_argument(message) {}
 };
 
-class Table
-
+class RouteTable
 {
-    
 private:
-    int cols;
-    int getValidKey(const int key);
-    wstring getValidOpenText(const wstring& s);
-    wstring getValidCipherText(const wstring& s);
+    int columnCount;
+    int validateTableKey(const int key);
+    wstring validateInputText(const wstring& text);
+    wstring validateOutputText(const wstring& text);
     
 public:
-    explicit Table(int key);
-    wstring encrypt(const wstring& plain);
-    wstring decrypt(const wstring& cipher);
+    explicit RouteTable(int key);
+    wstring encodeText(const wstring& plainText);
+    wstring decodeText(const wstring& cipherText);
 };
