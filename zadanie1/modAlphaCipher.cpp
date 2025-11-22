@@ -1,119 +1,119 @@
-
 #include "modAlphaCipher.h"
 using namespace std;
 
-modAlphaCipher::modAlphaCipher(const wstring& keyStr)
+AlphaCipher::AlphaCipher(const wstring& keyText)
 {
-    for (unsigned k = 0; k < alphabet.size(); ++k) {
-        alphaIndex[alphabet[k]] = k;
+    for (unsigned index = 0; index < russianAlphabet.size(); ++index) {
+        charToNumber[russianAlphabet[index]] = index;
     }
-    keySeq = toNums(getValidKey(keyStr));
+    encryptionKey = convertTextToNumbers(validateEncryptionKey(keyText));
 }
 
-vector<int> modAlphaCipher::toNums(const wstring& s)
+vector<int> AlphaCipher::convertTextToNumbers(const wstring& text)
 {
-    vector<int> resultNums;
-    resultNums.reserve(s.size());
-    for (auto sym : s) {
-        resultNums.push_back(alphaIndex[sym]);
+    vector<int> numberSequence;
+    numberSequence.reserve(text.size());
+    for (auto character : text) {
+        numberSequence.push_back(charToNumber[character]);
     }
-    return resultNums;
+    return numberSequence;
 }
 
-wstring modAlphaCipher::toStr(const vector<int>& v)
+wstring AlphaCipher::convertNumbersToText(const vector<int>& numbers)
 {
-    wstring resultStr;
-    resultStr.reserve(v.size());
-    for (auto idx : v) {
-        resultStr.push_back(alphabet[idx]);
+    wstring textResult;
+    textResult.reserve(numbers.size());
+    for (auto number : numbers) {
+        textResult.push_back(russianAlphabet[number]);
     }
-    return resultStr;
+    return textResult;
 }
 
-wstring modAlphaCipher::getValidKey(const wstring& s)
+wstring AlphaCipher::validateEncryptionKey(const wstring& key)
 {
-    wstring tmp;
-    for (auto c : s) {
-        if (!iswspace(c)) {
-            tmp.push_back(c);
+    wstring processedKey;
+    for (auto character : key) {
+        if (!iswspace(character)) {
+            processedKey.push_back(character);
         }
     }
     
-    if (tmp.empty())
-        throw cipher_error("Empty key");
+    if (processedKey.empty())
+        throw CipherException("Ключ не может быть пустым");
     
-    wstring lower = L"абвгдеёжзийклмнопрстуфхцчшщъыьэюя";
-    wstring upper = L"АБВГДЕЁЖЗИЙКЛМНОПРСТУФХЦЧШЩЪЫЬЭЮЯ";
+    wstring lowercaseLetters = L"абвгдеёжзийклмнопрстуфхцчшщъыьэюя";
+    wstring uppercaseLetters = L"АБВГДЕЁЖЗИЙКЛМНОПРСТУФХЦЧШЩЪЫЬЭЮЯ";
     
-    for (auto & c : tmp) {
-        // Преобразование строчных в прописные
-        size_t pos = lower.find(c);
-        if (pos != wstring::npos) {
-            c = upper[pos];
-        } else if (alphabet.find(c) == wstring::npos) {
-            throw cipher_error("Invalid key");
+    for (auto & character : processedKey) {
+        size_t position = lowercaseLetters.find(character);
+        if (position != wstring::npos) {
+            character = uppercaseLetters[position];
+        } else if (russianAlphabet.find(character) == wstring::npos) {
+            throw CipherException("Ключ содержит недопустимые символы");
         }
     }
-    return tmp;
+    return processedKey;
 }
 
-wstring modAlphaCipher::getValidOpenText(const wstring& s)
+wstring AlphaCipher::validatePlainText(const wstring& text)
 {
-    wstring tmp;
-    wstring lower = L"абвгдеёжзийклмнопрстуфхцчшщъыьэюя";
-    wstring upper = L"АБВГДЕЁЖЗИЙКЛМНОПРСТУФХЦЧШЩЪЫЬЭЮЯ";
+    wstring processedText;
+    wstring lowercaseLetters = L"абвгдеёжзийклмнопрстуфхцчшщъыьэюя";
+    wstring uppercaseLetters = L"АБВГДЕЁЖЗИЙКЛМНОПРСТУФХЦЧШЩЪЫЬЭЮЯ";
     
-    for (auto c : s) {
-        if (!iswspace(c)) { // Игнорируем пробелы
-            if (alphabet.find(c) != wstring::npos) {
-                tmp.push_back(c);
+    for (auto character : text) {
+        if (!iswspace(character)) {
+            if (russianAlphabet.find(character) != wstring::npos) {
+                processedText.push_back(character);
             } else {
-                
-                size_t pos = lower.find(c);
-                if (pos != wstring::npos) {
-                    tmp.push_back(upper[pos]); 
+                size_t position = lowercaseLetters.find(character);
+                if (position != wstring::npos) {
+                    processedText.push_back(uppercaseLetters[position]);
                 }
             }
         }
     }
-    if (tmp.empty())
-        throw cipher_error("Empty open text");
-    return tmp;
+    
+    if (processedText.empty())
+        throw CipherException("Текст для шифрования не может быть пустым");
+        
+    return processedText;
 }
 
-wstring modAlphaCipher::getValidCipherText(const wstring& s)
+wstring AlphaCipher::validateCipherText(const wstring& text)
 {
-    wstring tmp;
-    for (auto c : s) {
-        if (!iswspace(c)) {
-            tmp.push_back(c);
+    wstring processedText;
+    for (auto character : text) {
+        if (!iswspace(character)) {
+            processedText.push_back(character);
         }
     }
     
-    if (tmp.empty())
-        throw cipher_error("Empty cipher text");
+    if (processedText.empty())
+        throw CipherException("Зашифрованный текст не может быть пустым");
     
-    for (auto c : tmp) {
-        if (alphabet.find(c) == wstring::npos)
-            throw cipher_error("Invalid cipher text");
+    for (auto character : processedText) {
+        if (russianAlphabet.find(character) == wstring::npos)
+            throw CipherException("Зашифрованный текст содержит недопустимые символы");
     }
-    return tmp;
+    
+    return processedText;
 }
 
-wstring modAlphaCipher::encrypt(const wstring& plain)
+wstring AlphaCipher::encodeText(const wstring& plainText)
 {
-    vector<int> tmp = toNums(getValidOpenText(plain));
-    for (unsigned p = 0; p < tmp.size(); ++p) {
-        tmp[p] = (tmp[p] + keySeq[p % keySeq.size()]) % alphabet.size();
+    vector<int> numberSequence = convertTextToNumbers(validatePlainText(plainText));
+    for (unsigned position = 0; position < numberSequence.size(); ++position) {
+        numberSequence[position] = (numberSequence[position] + encryptionKey[position % encryptionKey.size()]) % russianAlphabet.size();
     }
-    return toStr(tmp);
+    return convertNumbersToText(numberSequence);
 }
 
-wstring modAlphaCipher::decrypt(const wstring& cipher)
+wstring AlphaCipher::decodeText(const wstring& cipherText)
 {
-    vector<int> tmp = toNums(getValidCipherText(cipher));
-    for (unsigned p = 0; p < tmp.size(); ++p) {
-        tmp[p] = (tmp[p] + alphabet.size() - keySeq[p % keySeq.size()]) % alphabet.size();
+    vector<int> numberSequence = convertTextToNumbers(validateCipherText(cipherText));
+    for (unsigned position = 0; position < numberSequence.size(); ++position) {
+        numberSequence[position] = (numberSequence[position] + russianAlphabet.size() - encryptionKey[position % encryptionKey.size()]) % russianAlphabet.size();
     }
-    return toStr(tmp);
+    return convertNumbersToText(numberSequence);
 }
