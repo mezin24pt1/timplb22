@@ -5,7 +5,7 @@
 #include <cwctype>
 #include <limits>
 #include <string>
-#include "routeCipher.h"
+#include "table_cipher.h"
 using namespace std;
 
 wstring convertStringToWide(const string& inputString)
@@ -77,3 +77,4 @@ int main()
     
     return 0;
 }
+
