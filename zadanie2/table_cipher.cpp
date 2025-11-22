@@ -1,129 +1,132 @@
-
 #include "table_cipher.h"
 #include <algorithm>
 #include <vector>
 #include <cwctype>  
 using namespace std;
 
-int Table::getValidKey(const int key)
+int RouteTable::validateTableKey(const int key)
 {
     if (key <= 0)
-        throw cipher_error("Invalid key: key must be positive");
+        throw CipherException("Некорректный ключ: количество столбцов должно быть положительным числом");
     return key;
 }
-wstring Table::getValidOpenText(const wstring& s)
+
+wstring RouteTable::validateInputText(const wstring& text)
 {
-    wstring tmp;
-    wstring lower = L"абвгдеёжзийклмнопрстуфхцчшщъыьэюя";
-    wstring upper = L"АБВГДЕЁЖЗИЙКЛМНОПРСТУФХЦЧШЩЪЫЬЭЮЯ";
+    wstring processedText;
+    wstring lowercaseLetters = L"абвгдеёжзийклмнопрстуфхцчшщъыьэюя";
+    wstring uppercaseLetters = L"АБВГДЕЁЖЗИЙКЛМНОПРСТУФХЦЧШЩЪЫЬЭЮЯ";
     
-    for (auto c : s) {
-        if (!iswspace(c)) { 
-            if (upper.find(c) != wstring::npos) {
-                tmp.push_back(c);
+    for (auto character : text) {
+        if (!iswspace(character)) {
+            if (uppercaseLetters.find(character) != wstring::npos) {
+                processedText.push_back(character);
             } else {
-    
-                size_t pos = lower.find(c);
-                if (pos != wstring::npos) {
-                    tmp.push_back(upper[pos]); 
+                size_t position = lowercaseLetters.find(character);
+                if (position != wstring::npos) {
+                    processedText.push_back(uppercaseLetters[position]);
                 }
             }
         }
     }
-    if (tmp.empty())
-        throw cipher_error("Empty open text");
-    return tmp;
+    
+    if (processedText.empty())
+        throw CipherException("Текст для обработки не может быть пустым");
+        
+    return processedText;
 }
 
-wstring Table::getValidCipherText(const wstring& s)
+wstring RouteTable::validateOutputText(const wstring& text)
 {
-    wstring tmp;
-    for (auto c : s) {
-        if (!iswspace(c)) {
-            tmp.push_back(c);
+    wstring processedText;
+    for (auto character : text) {
+        if (!iswspace(character)) {
+            processedText.push_back(character);
         }
     }
     
-    if (tmp.empty())
-        throw cipher_error("Empty cipher text");
+    if (processedText.empty())
+        throw CipherException("Зашифрованный текст не может быть пустым");
     
-    wstring upper = L"АБВГДЕЁЖЗИЙКЛМНОПРСТУФХЦЧШЩЪЫЬЭЮЯ";  
-    for (auto c : tmp) {
-        if (upper.find(c) == wstring::npos)
-            throw cipher_error("Invalid cipher text");
+    wstring uppercaseLetters = L"АБВГДЕЁЖЗИЙКЛМНОПРСТУФХЦЧШЩЪЫЬЭЮЯ";
+    for (auto character : processedText) {
+        if (uppercaseLetters.find(character) == wstring::npos)
+            throw CipherException("Зашифрованный текст содержит недопустимые символы");
     }
-    return tmp;
+    
+    return processedText;
 }
 
-Table::Table(int key)
+RouteTable::RouteTable(int key)
 {
-    cols = getValidKey(key);
+    columnCount = validateTableKey(key);
 }
 
-wstring Table::encrypt(const wstring& plain)
+wstring RouteTable::encodeText(const wstring& plainText)
 {
-    wstring validText = getValidOpenText(plain);
-    int n = static_cast<int>(validText.length());
-    int rows = (n + cols - 1) / cols;
+    wstring validText = validateInputText(plainText);
+    int textLength = static_cast<int>(validText.length());
+    int rowCount = (textLength + columnCount - 1) / columnCount;
 
-    vector<vector<wchar_t>> grid(rows, vector<wchar_t>(cols, L' '));
-    int pos = 0;
+    vector<vector<wchar_t>> characterGrid(rowCount, vector<wchar_t>(columnCount, L' '));
+    int currentPosition = 0;
 
-    for (int r = 0; r < rows; ++r) {
-        for (int c = 0; c < cols; ++c) {
-            if (pos < n) {
-                grid[r][c] = validText[pos++];
+    for (int row = 0; row < rowCount; ++row) {
+        for (int column = 0; column < columnCount; ++column) {
+            if (currentPosition < textLength) {
+                characterGrid[row][column] = validText[currentPosition++];
             }
         }
     }
 
-    wstring out;
-    out.reserve(n);
+    wstring resultText;
+    resultText.reserve(textLength);
     
-    for (int c = cols - 1; c >= 0; --c) {
-        for (int r = 0; r < rows; ++r) {
-            if (grid[r][c] != L' ') {
-                out += grid[r][c];
+    for (int column = columnCount - 1; column >= 0; --column) {
+        for (int row = 0; row < rowCount; ++row) {
+            if (characterGrid[row][column] != L' ') {
+                resultText += characterGrid[row][column];
             }
         }
     }
-    return out;
+    
+    return resultText;
 }
 
-wstring Table::decrypt(const wstring& cipher)
+wstring RouteTable::decodeText(const wstring& cipherText)
 {
-    wstring validText = getValidCipherText(cipher);
-    int n = static_cast<int>(validText.length());
-    int rows = (n + cols - 1) / cols;
+    wstring validText = validateOutputText(cipherText);
+    int textLength = static_cast<int>(validText.length());
+    int rowCount = (textLength + columnCount - 1) / columnCount;
     
-    int fullCols = n % cols;
-    if (fullCols == 0) fullCols = cols;
+    int fullColumns = textLength % columnCount;
+    if (fullColumns == 0) fullColumns = columnCount;
 
-    vector<vector<wchar_t>> grid(rows, vector<wchar_t>(cols, L' '));
-    int pos = 0;
+    vector<vector<wchar_t>> characterGrid(rowCount, vector<wchar_t>(columnCount, L' '));
+    int currentPosition = 0;
 
-    for (int c = cols - 1; c >= 0; --c) {
-        int h = rows;
-    
-        if (c >= fullCols) {
-            h = rows - 1;
+    for (int column = columnCount - 1; column >= 0; --column) {
+        int currentHeight = rowCount;
+        if (column >= fullColumns) {
+            currentHeight = rowCount - 1;
         }
-        for (int r = 0; r < h; ++r) {
-            if (pos < n) {
-                grid[r][c] = validText[pos++];
+        for (int row = 0; row < currentHeight; ++row) {
+            if (currentPosition < textLength) {
+                characterGrid[row][column] = validText[currentPosition++];
             }
         }
     }
 
-    wstring out;
-    out.reserve(n);
+    wstring resultText;
+    resultText.reserve(textLength);
     
-    for (int r = 0; r < rows; ++r) {
-        for (int c = 0; c < cols; ++c) {
-            if (grid[r][c] != L' ') {
-                out += grid[r][c];
+    for (int row = 0; row < rowCount; ++row) {
+        for (int column = 0; column < columnCount; ++column) {
+            if (characterGrid[row][column] != L' ') {
+                resultText += characterGrid[row][column];
             }
         }
     }
-    return out;
+    
+    return resultText;
 }
