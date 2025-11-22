@@ -31,7 +31,7 @@ int main()
     getline(cin, columnInput);
 
     try {
-        int columnCount = stoi(columnInput);
+        int columnCount = nelza(columnInput);
         RouteTable cipher(columnCount);
         cout << "Таблица для шифрования создана." << endl;
 
@@ -77,4 +77,5 @@ int main()
     
     return 0;
 }
+
 
